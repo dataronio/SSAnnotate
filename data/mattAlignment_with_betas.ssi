@@ -1,0 +1,13 @@
+# STOCKHOLM 1.0
+
+
+#=BETA 105	434	5	224	1	oiooo
+#=BETA 315	402	2	67	1	io
+#=BETA 316	436	2	100	-1	io
+#=BETA 368	398	5	37	-1	iiooo
+
+pdb1wc2.ent.gz:A     ------N--QKCSGNPRRY-NGK-----------------------------------------------------------------------S------C-ASTTNYHD--------------------------------------------------------------------------------------------------------------------------------------------SHKGACGCGPASGDAQFGWNAGS---------------------------------------FVAAASQMYFDSGNKGWCGQ--H----------------------------CGQCIKLTTTGGYVPGQG-------GPV-REGLSKTFMITNLCPNIYPNQDWCNQGSQYGGHNKYGYELHLDLENG----------------------------------------R----SQV--TGMGW---NNPETTWEVVNCDSEHNHDHRTPSNSMYGQCQCAHQ-------------------------------
+pdb2pic.ent.gz:A     MSSKPTDRGQQ-------YKDG-KFTQPFSLVNQPDAVGAPINAGDFAEQINHIRNSSPRLYGNQSNVYNAVQEWLRAGGDTRNMRQFGIDAWQMEGADNYGNVQFTGYYTPVIQARHTRQGEFQYPIYRMPPKRGRLSSRAEIYAGALSDKYILAYSNSLMDNFIMDVQGSGYIDFGDGSPLNFFSYAGKNGHAYRSIGKVIIDRGEVKKEDMSMQAIRHWGETHSEAEVRELLEQNPSFVFFKPQSFAPV-KGASAV--------P--L-VGR--------------------------------------ASVASD---RS---------IIP----------------------------PGTTLLAEV---------PLLDNNGKFNGQY-ELRLMVALDVGG----A---IKG-------------QHFAIYQ-----------------------------------------GIGPEA--GHR----AGWYNHYGRVWVL--------------------------KTAPGAGNVFSG-------------------
+pdb2jnz.ent.gz:A     -----------------------RGS-------------------------------------------------------------------------------QKGSD-----------------------------------------------------------------------------------------------------------------------------------------------PK----------------------------------------------------------KLV--------------------LDIKYTRPGDSLAEVELRQHGSEE----WEPLTKKG-------------------------NVWEVKSSK-------------------------------FS-----------------------------------------I----GK-----------------------------------------------------------TYKPEE-------------
+pdb1l8f.ent.gz:A     ----------------------------------------------------------------------------------------------A------N-GQSTRYWD--------------------------------------------------------------------------------------------------------------------------------------------CCKPSCGWRGKGPVNQP-VY-SC-DANFQRIHDFDAVSGCEGGPAFSCADHSPWAINDNLSYGFAATA--L-S-------GQ--T------------------------EESWCCACYALTFT-S--------------GP-VAGKTMVVQSTSTGGD--------LG------------SNHFDLNIPGGGVGLFDGCTPQFGGLPGARYGGISSRQECDSFPEPLKPG----CQ---WRFDW---FQNADNPSFTFER--V---Q--CP-EELV-------A-----------------RTGCRRHDDGGFA
+//
