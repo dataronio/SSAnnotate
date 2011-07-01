@@ -261,6 +261,18 @@ int LoadTables() {
 // Defined to be nothing in other environments.
 int CDECL main(int realArgc, char **realArgv) {
 	int a;
+
+
+// used for alpha helix output
+        FILE *pFileAlpha;
+        char pcAlphaFileName[100];
+        int nSeqs = 0;
+        int nHelix = 0;
+        char pcLine[80];
+                        
+
+
+
 	if (realArgc <= 1) {
 		printf("Nothing to do.\n");
 		return 0;
@@ -313,6 +325,45 @@ int CDECL main(int realArgc, char **realArgv) {
 			chainIndices[i] = indices += seqs->seqs[i]->length;
 			indices += model->chains[i]->length;
 		}
+
+
+// output the alpha helices, the right-handed standard, type = 1
+                fileName[4] = 0;
+		sprintf( pcAlphaFileName, "%s_alpha.ssi", fileName ); 
+		if(!(pFileAlpha = fopen(pcAlphaFileName,"w"))){
+			printf("can't create file\n");
+			exit(1);
+		}
+		fileName[4] = '.';
+		fprintf( pFileAlpha, "# STOCKHOLM 1.0\n\n");
+		fprintf( pFileAlpha, "#=ALPHA type description: RIGHT_ALPHA = 1; LEFT_ALPHA.ll = 6; RIGHT_310 = 5;\n\n"),
+			fprintf( pFileAlpha, "#=ALPHA format: start length type\n\n");
+		for ( ; nSeqs < seqs->numSeqs; nSeqs++ )
+		{
+			PDBChain *chain = model->chains[nSeqs];
+			for ( ; nHelix < chain->numAlphaHelices; nHelix++ )
+			{
+				sprintf( pcLine, "#=ALPHA %d %d %d\n", 
+					chain->alphaHelices[nHelix].start, 
+					chain->alphaHelices[nHelix].length, 
+					chain->alphaHelices[nHelix].type);
+				fprintf( pFileAlpha, pcLine);
+			}
+		}
+		for (i=0; i<model->numChains; i++) {
+			fprintf(pFileAlpha, "\n%-20s ", seqs->seqs[i]->name);
+			for (j=0; j<seqs->seqs[i]->length; j++) {
+				char c = seqs->seqs[i]->seq[j];
+				if (c<0) fputc('-', pFileAlpha);
+				else fputc(ShortNames[c], pFileAlpha);
+			}
+		}
+		fprintf(pFileAlpha, "\n//\n");
+		fclose(pFileAlpha);
+/////////////////////////// alpha helix output done ////////////////
+
+
+
 		for (i=0; i<seqs->numSeqs; i++) {
 			Sequence *seq = seqs->seqs[i];
 			PDBChain *chain = model->chains[i];
