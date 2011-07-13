@@ -264,6 +264,7 @@ int LoadTables() {
 // CDECL is needed to avoid a warning under MSVC when using fastcall.
 // Defined to be nothing in other environments.
 int CDECL main(int realArgc, char **realArgv) {
+
 	if (realArgc <= 1) {
 	// When the program has no input
 		printf("Nothing to do.\n");
@@ -358,6 +359,7 @@ int CDECL main(int realArgc, char **realArgv) {
 			chainIndices[i] = indices += seqs->seqs[i]->length;
 			indices += model->chains[i]->length;
 		}
+
 		
 		
 ///////////////////////////////////////////////////////////////////////////////////		
@@ -428,6 +430,7 @@ int CDECL main(int realArgc, char **realArgv) {
 ////////////////////////////////////////////////////////////////////////////////////		
 		
 		
+
 		for (i=0; i<seqs->numSeqs; i++) {
 			Sequence *seq = seqs->seqs[i];
 			PDBChain *chain = model->chains[i];
