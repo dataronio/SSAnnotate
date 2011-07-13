@@ -1,0 +1,5 @@
+*.o
+*.pdb
+*.fasta
+*.ssi
+test
