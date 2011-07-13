@@ -16,7 +16,7 @@
 #include "FileReader.h"
 
 #include <string.h>
-#include <malloc.h>
+//#include <malloc.h>
 #include <stdlib.h>
 
 const int lookupTable[26] =
