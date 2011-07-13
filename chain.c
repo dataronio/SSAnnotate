@@ -823,6 +823,8 @@ int GetResidueFirstIndex(PDBChain *chain, int *position, int pdbPosition, char i
 	return 0;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 void CalcChainSecondary(PDBChain *chain) {
 	if (!chain->secondaryCalculated) {
 		CalcHbonds(chain);
@@ -832,6 +834,7 @@ void CalcChainSecondary(PDBChain *chain) {
 		AssembleSheets(chain);
 	}
 }
+
 
 void CalcHbonds(PDBChain *chain) {
 	Atom *CA, *N, *O, *C, *C2, *O2, *CA2, *O3, *C3;
@@ -927,6 +930,8 @@ int AreHbonded(PDBChain *chain, int res1, int res2, HydrogenBond **hbond) {
 	return AreHbondedAsymmetric(chain, res2, res1, hbond);
 }
 
+
+
 int AreHbondedAsymmetric(PDBChain *chain, int res1, int res2, HydrogenBond **hbond) {
 	int min = 0;
 	int max = chain->numHbonds-1;
@@ -955,6 +960,9 @@ int AreHbondedAsymmetric(PDBChain *chain, int res1, int res2, HydrogenBond **hbo
 	}
 	return 0;
 }
+
+
+
 
 void CalcBetaSheets(PDBChain *chain) {
 	int hbond;
@@ -1024,6 +1032,8 @@ void CalcBetaSheets(PDBChain *chain) {
 	}
 }
 
+
+
 void AddAlphaHelix(PDBChain *chain, AlphaHelix *helix) {
 	int i = chain->numAlphaHelices;
 	chain->alphaHelices = (AlphaHelix*) realloc(chain->alphaHelices, sizeof(AlphaHelix)*(chain->numAlphaHelices+1));
@@ -1035,8 +1045,19 @@ void AddAlphaHelix(PDBChain *chain, AlphaHelix *helix) {
 	chain->numAlphaHelices++;
 }
 
+
+// Alpha
+// Calculating right-handed and left-handed helices is possible, but need to change "type" constant to do this
+// Adding alpha helices part is too redundant. Shortening will be done later.
 void CalcStandardHelixType(PDBChain *chain, int skip, int type) {
 	int i;
+	double right; // 1 represents right-handed, -1 represents left-handed
+	double d;
+	
+	// Check we want to calculate "left-handed" helices
+	if (6<=type && type<=8) right = -1;
+	else right = 1;
+	
 	for (i=0; i<chain->length-skip; i++) {
 		if (AreHbondedAsymmetric(chain, i, i+skip, 0)) {
 			int strandlen = 1;
@@ -1044,43 +1065,108 @@ void CalcStandardHelixType(PDBChain *chain, int skip, int type) {
 				strandlen++;
 			}
 			if (strandlen >= 2) {
-				AlphaHelix helix;
-				helix.start = i;
-				helix.length = strandlen+skip-1;
-				i+= strandlen-1;
-				helix.type = type;
-				helix.id[0] = helix.comment[0] = 0;
-				AddAlphaHelix(chain, &helix);
-				continue;
+				if ( AreLeftHanded(chain, i, i+strandlen+skip-1, &d) ) 	{
+					
+					// right-handed(right=1): d should be positive, left-handed(right=-11): d should be negative 
+					if( (right*d) >= 0 ) {
+						AlphaHelix helix;
+						helix.start = i;
+						helix.length = strandlen+skip-1;
+						i+= strandlen-1;
+						helix.type = type;
+						helix.id[0] = helix.comment[0] = 0;
+						AddAlphaHelix(chain, &helix);
+					}
+				}
 			}
 		}
-		if (AreHbondedAsymmetric(chain, i+skip, i, 0)) {
+		else if (AreHbondedAsymmetric(chain, i+skip, i, 0)) {
 			int strandlen = 1;
 			while (i + strandlen < chain->length - skip && AreHbondedAsymmetric(chain, i+strandlen+skip, i+strandlen, 0)) {
 				strandlen++;
 			}
 			if (strandlen >= 2) {
-				AlphaHelix helix;
-				helix.start = i;
-				helix.length = strandlen+skip;
-				i+= strandlen-1;
-				helix.type = type;
-				helix.id[0] = helix.comment[0] = 0;
-				AddAlphaHelix(chain, &helix);
-				continue;
+				if ( AreLeftHanded(chain, i, i+strandlen+skip, &d) ) {
+			
+					// right-handed(left=0): d should be positive, left-handed(left=1): d should be negative 		
+					if( (right*d) >= 0 ) {						
+						AlphaHelix helix;
+						helix.start = i;
+						helix.length = strandlen+skip;
+						i+= strandlen-1;
+						helix.type = type;
+						helix.id[0] = helix.comment[0] = 0;
+						AddAlphaHelix(chain, &helix);
+					}	
+				}
 			}
 		}
 	}
 }
 
+
+
+// Very similar with CompareDirections function. Integrating or implementing polymorphism will be done later.
+int AreLeftHanded(PDBChain *chain, int start, int end, double *out) {
+	// If out is positive: right-handed helix
+	// If out is negative: left-handed helix
+
+	// CA Atom gives coordinate of residue
+	// Atom s is CA atom of residue at start index of helix
+	// Atom e is CA atom of residue at end index of helix
+	//Atom *s = GetAtom(chain, start, " CA ");
+	//Atom *e = GetAtom(chain, end, " CA ");
+
+	Atom *s = GetAtom(chain, start, " CA ");
+	Atom *e = GetAtom(chain, end, " CA ");
+	
+	if(s && e) {
+		Vector chaindir;
+		subVect(&chaindir, &e->pos, &s->pos);
+		normalizeVect(&chaindir);
+		
+		int i;
+
+		// Grap CA atoms of first three residues on helix	
+		Atom *a1 = GetAtom(chain, start+1, " CA ");
+		Atom *a2 = GetAtom(chain, start+2, " CA ");
+		Atom *a3 = GetAtom(chain, start+3, " CA ");
+
+		Vector v1, v2;
+		subVect(&v1, &a2->pos, &a1->pos);
+		subVect(&v2, &a3->pos, &a2->pos);
+		
+		normalizeVect(&v1);
+		normalizeVect(&v2);
+		
+		Vector v3;
+		crossVect(&v3, &v1, &v2);
+		normalizeVect(&v3);
+		
+		*out = dotVect(&chaindir, &v3);
+
+		return 1;
+	}
+	return 0;
+}
+
+
+// Alpha
 void CalcHelices(PDBChain *chain) {
 	int i, j;
 	free(chain->alphaHelices);
 	chain->alphaHelices = 0;
 	chain->numAlphaHelices = 0;
+	
+	// alpha(1), omega(2), gamma(3) has left-handed
+	// calculating right-handed ones will calculate left-handed ones
 	CalcStandardHelixType(chain, 4, RIGHT_ALPHA);
-	CalcStandardHelixType(chain, 3, RIGHT_310);
-	CalcStandardHelixType(chain, 5, RIGHT_PI);
+	CalcStandardHelixType(chain, 4, LEFT_ALPHA);
+
+	//Commented out to detect only alpha helices
+	//CalcStandardHelixType(chain, 3, RIGHT_310);
+	//CalcStandardHelixType(chain, 5, RIGHT_PI);
+
 	for (i=1; i<chain->numAlphaHelices; i++) {
 		AlphaHelix helix = chain->alphaHelices[i];
 		j = i;
@@ -1090,8 +1176,15 @@ void CalcHelices(PDBChain *chain) {
 		}
 		chain->alphaHelices[j] = helix;
 	}
+
 }
 
+
+
+
+
+// Alpha
+// Figure out what it is doing
 int CompareDirections(PDBChain *chain, int p1, int p2, int p3, double *out) {
 	Atom *a1 = GetAtom(chain, p1, " CA ");
 	Atom *a2 = GetAtom(chain, p2, " CA ");
@@ -1107,6 +1200,26 @@ int CompareDirections(PDBChain *chain, int p1, int p2, int p3, double *out) {
 	}
 	return 0;
 }
+
+int CompareDirections2(PDBChain *chain, int p1, int p2, int p3, double *out) {
+	Atom *a1 = GetAtom(chain, p1, " CA ");
+	Atom *a2 = GetAtom(chain, p2, " CA ");
+	Atom *a3 = GetAtom(chain, p3, " CA ");
+	if (a1 && a2 && a3) {
+		Vector v1, v2;
+		subVect(&v1, &a2->pos, &a1->pos);
+		subVect(&v2, &a3->pos, &a1->pos);
+		normalizeVect(&v1);
+		normalizeVect(&v2);
+		*out = dotVect(&v1, &v2);
+		return 1;
+	}
+	return 0;
+}
+
+
+
+
 
 void AssembleSheets(PDBChain *chain) {
 	int i, j;

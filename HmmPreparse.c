@@ -16,6 +16,8 @@
 #endif
 #include <stdarg.h>
 #include <stdio.h>
+// The following library is included to use options
+#include <unistd.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -145,6 +147,7 @@ struct ALIGNED_STRAND_PAIR {
 };
 typedef struct ALIGNED_STRAND_PAIR AlignedStrandPair;
 
+// Define Table structure
 typedef struct {
 	char id;
 	double scores[21][21];
@@ -152,6 +155,7 @@ typedef struct {
 Table *tables = 0;
 int numTables = 0;
 
+// Load Beta-mutation table
 int LoadTables() {
 	int res = 1;
 	char *line = 0;
@@ -260,13 +264,54 @@ int LoadTables() {
 // CDECL is needed to avoid a warning under MSVC when using fastcall.
 // Defined to be nothing in other environments.
 int CDECL main(int realArgc, char **realArgv) {
-	int a;
 	if (realArgc <= 1) {
+	// When the program has no input
 		printf("Nothing to do.\n");
 		return 0;
 	}
+	
+////////////////////////////////////////////////////////////////////////////////////////////////	
+
+	// Flags for printing annotations 
+	// If alpha=1, alpha annotation will be printed. If beta=1, beta annotation will be printed
+	// Default is to print both annotations
+	int alpha = 1;
+	int beta = 1;
+	
+	// Get option for alpha/beta/none
+	int c;
+	char *option;
+	
+	while ( (c = getopt(realArgc, realArgv, "o:") ) != -1 ) {
+		switch (c) {
+		case 'o':
+			option = optarg;
+			break;
+		case '?':
+			printf("Unrecognizable option \n");
+			return 1;
+		default:
+			return 1;
+		}
+	}
+
+	// To add more options, this part should be modified, too
+	if( strcmp(option, "alpha") == 0 ) beta = 0;			
+	else if( strcmp(option, "beta") == 0 )  alpha = 0;
+	else {
+		if(optind != 1) {
+			printf("Usage: [executable] <protein name>\n");
+			printf("Usage: [executable] -o [alpha|beta] <protein name>\n");
+			return 1;
+		}
+	}
+	
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
 	//test\\MattAlignment 
-	for (a=1; a<realArgc; a++) {
+	int a;
+	for (a=optind; a<realArgc; a++) {
 		SequenceAlignment *seqs;
 		PDBData *pdb;
 		PDBModel *model;
@@ -313,6 +358,76 @@ int CDECL main(int realArgc, char **realArgv) {
 			chainIndices[i] = indices += seqs->seqs[i]->length;
 			indices += model->chains[i]->length;
 		}
+		
+		
+///////////////////////////////////////////////////////////////////////////////////		
+
+		// Output Alpha helix information
+		// Right-handed Alpha, type = 1
+		// Left-handed Alpha, type = 6
+		// 310, type = 5
+
+		FILE *out;
+		sprintf(fileName, "%s.ssi", realArgv[a]);
+		out = fopen(fileName, "wb");
+
+		int nSeqs;
+		int nHelix;
+
+		fprintf(out, "# STOCKHOLM 1.0\n\n");
+		
+		// Print alpha annotations only if alpha = 1
+	    if(alpha == 1) {
+	    
+		// To be removed later
+		// fprintf(out, "# ALPHA type description: RIGHT_ALPHA = 1; LEFT_ALPHA = 6;\n"),
+		// fprintf(out, "# ALPHA format: start length type\n");
+		// 
+		
+		// Remove redundant alpha helices
+		PDBChain *chainA = model->chains[0];
+		for(nSeqs = 1; nSeqs < seqs->numSeqs ; nSeqs++) 
+		{
+			PDBChain *chainB = model->chains[nSeqs];	
+			int loop_start = chainA->numAlphaHelices - 1;
+			int ia, ib;
+			for(ib=chainB->numAlphaHelices-1 ; ib >= 0 ; ib--) 
+			{
+				for(ia=loop_start ; ia >=0 ; ia--) 
+				{
+					if(chainA->alphaHelices[ia].start == chainB->alphaHelices[ib].start) 
+					{
+						int j;
+						for(j=ib+1 ; j < chainB->numAlphaHelices ; j++)
+						{
+							chainB->alphaHelices[j-1] = chainB->alphaHelices[j];
+						}
+						chainB->numAlphaHelices--;
+						break;
+					}
+				}
+			}
+		}
+
+		// Print out each alpha helices detected
+		for (nSeqs = 0 ; nSeqs < seqs->numSeqs; nSeqs++ )
+		{
+			PDBChain *chain = model->chains[nSeqs];
+			for (nHelix = 0; nHelix < chain->numAlphaHelices; nHelix++ )
+			{
+				fprintf(out, "#=ALPHA %d %d %d\n",
+					chain->alphaHelices[nHelix].start, 
+					chain->alphaHelices[nHelix].length, 
+					chain->alphaHelices[nHelix].type);
+			}
+		}
+
+		fprintf(out, "\n");		
+		}
+
+////////////////////////////////////////////////////////////////////////////////////		
+		
+		
 		for (i=0; i<seqs->numSeqs; i++) {
 			Sequence *seq = seqs->seqs[i];
 			PDBChain *chain = model->chains[i];
@@ -344,7 +459,7 @@ int CDECL main(int realArgc, char **realArgv) {
 					Sequence *seq = seqs->seqs[i];
 					PDBChain *chain = model->chains[i];
 					count = 0;
-					if (seqIndices[i][p1] == -1) continue;
+					if (seqIndices[i][p1] == -1) continue;				
 					for (j=0; j<chain->numBetaPairs; j++) {
 						BetaResiduePair pair;
 						if (FindMatch(chain->betaPairs+j, seqIndices[i][p1], &pair)) {
@@ -514,6 +629,7 @@ int CDECL main(int realArgc, char **realArgv) {
 			pairs = 0;
 			numPairs = 0;
 			if (markForDeath) {
+			// Print nothing
 				for (i=seqs->seqs[0]->length-1; i>=0; i--) {
 					if (!markForDeath[i]) continue;
 					for (j=0; j<model->numChains; j++) {
@@ -548,10 +664,11 @@ int CDECL main(int realArgc, char **realArgv) {
 				strands = 0;
 			}
 			else {
-				FILE *out;
-				sprintf(fileName, "%s.ssi", realArgv[a]);
-				out = fopen(fileName, "wb");
-				fprintf(out, "# STOCKHOLM 1.0\n\n");
+				//FILE *out;
+				//sprintf(fileName, "%s.ssi", realArgv[a]);
+				//out = fopen(fileName, "wb");
+				//fprintf(out, "# STOCKHOLM 1.0\n\n");
+				
 				for (i=0; i<numStrands; i++) {
 					int j = i;
 					AlignedStrandPair temp = strands[i];
@@ -560,7 +677,12 @@ int CDECL main(int realArgc, char **realArgv) {
 						j--;
 					}
 					strands[j] = temp;
-				}
+				}	
+				
+				// Print beta annotations only if beta = 1
+				if(beta == 1) {
+				
+				// Print out beta strand annotation
 				for (i=0; i<numStrands; i++) {
 					int p1 = strands[i].res1;
 					int p2 = strands[i].res2;
@@ -605,6 +727,10 @@ int CDECL main(int realArgc, char **realArgv) {
 					}
 					fputc('\n', out);
 				}
+
+				}
+				
+				
 				for (i=0; i<model->numChains; i++) {
 					fprintf(out, "\n%-20s ", seqs->seqs[i]->name);
 					for (j=0; j<seqs->seqs[i]->length; j++) {
