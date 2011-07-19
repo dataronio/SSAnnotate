@@ -42,9 +42,19 @@ struct SEQUENCE {
 };
 typedef struct SEQUENCE Sequence;
 
+// New struct added: Jisoo
+struct SEQUENCE_GAP {
+	int *index;
+	int *len;
+	int numGaps;
+};
+typedef struct SEQUENCE_GAP SequenceGap; 
+
+
 void AddCharacter(Sequence *s, char residue);
 Sequence *CreateSequence(char *name);
 void FreeSequence(Sequence *s);
+void FreeSequenceGap(SequenceGap *g);
 
 /* Outputs the sequence in fasta format to f.  Can output
  * multiple sequences to the same file.  Returns 1 on succes,
@@ -55,9 +65,11 @@ void FreeSequence(Sequence *s);
  * Assumes that the sequence uses the internal codes from 0 to 21.
  */
 
+// New member added: Jisoo
 struct SEQUENCE_ALIGNMENT {
 	Sequence ** seqs;
 	int numSeqs;
+	SequenceGap** gaps;
 };
 typedef struct SEQUENCE_ALIGNMENT SequenceAlignment;
 
@@ -72,5 +84,7 @@ int WriteSequenceAlignmentPIR(FILE *file, SequenceAlignment *s);
 void Reorder(SequenceAlignment *s);
 
 SequenceAlignment *LoadMultipleAlignment(char *file);
+int readRawMultipleAlignment(char *fileName, SequenceAlignment *seqs);
 
 #endif
+

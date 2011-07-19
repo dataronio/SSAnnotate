@@ -1065,19 +1065,13 @@ void CalcStandardHelixType(PDBChain *chain, int skip, int type) {
 				strandlen++;
 			}
 			if (strandlen >= 2) {
-				if ( AreLeftHanded(chain, i, i+strandlen+skip-1, &d) ) 	{
-					
-					// right-handed(right=1): d should be positive, left-handed(right=-11): d should be negative 
-					if( (right*d) >= 0 ) {
-						AlphaHelix helix;
-						helix.start = i;
-						helix.length = strandlen+skip-1;
-						i+= strandlen-1;
-						helix.type = type;
-						helix.id[0] = helix.comment[0] = 0;
-						AddAlphaHelix(chain, &helix);
-					}
-				}
+				AlphaHelix helix;
+				helix.start = i;
+				helix.length = strandlen+skip-1;
+				i+= strandlen-1;
+				helix.type = type;
+				helix.id[0] = helix.comment[0] = 0;
+				AddAlphaHelix(chain, &helix);
 			}
 		}
 		else if (AreHbondedAsymmetric(chain, i+skip, i, 0)) {
@@ -1086,19 +1080,13 @@ void CalcStandardHelixType(PDBChain *chain, int skip, int type) {
 				strandlen++;
 			}
 			if (strandlen >= 2) {
-				if ( AreLeftHanded(chain, i, i+strandlen+skip, &d) ) {
-			
-					// right-handed(left=0): d should be positive, left-handed(left=1): d should be negative 		
-					if( (right*d) >= 0 ) {						
-						AlphaHelix helix;
-						helix.start = i;
-						helix.length = strandlen+skip;
-						i+= strandlen-1;
-						helix.type = type;
-						helix.id[0] = helix.comment[0] = 0;
-						AddAlphaHelix(chain, &helix);
-					}	
-				}
+				AlphaHelix helix;
+				helix.start = i;
+				helix.length = strandlen+skip;
+				i+= strandlen-1;
+				helix.type = type;
+				helix.id[0] = helix.comment[0] = 0;
+				AddAlphaHelix(chain, &helix);
 			}
 		}
 	}
@@ -1161,7 +1149,7 @@ void CalcHelices(PDBChain *chain) {
 	// alpha(1), omega(2), gamma(3) has left-handed
 	// calculating right-handed ones will calculate left-handed ones
 	CalcStandardHelixType(chain, 4, RIGHT_ALPHA);
-	CalcStandardHelixType(chain, 4, LEFT_ALPHA);
+	
 
 	//Commented out to detect only alpha helices
 	//CalcStandardHelixType(chain, 3, RIGHT_310);

@@ -75,6 +75,17 @@ void FreeSequence(Sequence *s) {
 	}
 }
 
+
+// New module added: Jisoo
+void FreeSequenceGap(SequenceGap *g) {
+	if(g) {
+		if(g->index) free(g->index);
+		if(g->len) free(g->len);
+		free(g);
+	}
+}
+
+
 void AddCharacter(Sequence *s, char residue) {
 	if (s->length % 16 == 0) {
 		s->seq = (char*) realloc(s->seq, (s->length+16) * sizeof(char));
@@ -131,14 +142,18 @@ int WriteSequencePIR(FILE * file, Sequence *s) {
 	return 1;
 }
 
+//Jisoo
 void FreeSequenceAlignment(SequenceAlignment *s) {
 	int i;
 	for (i=0; i<s->numSeqs; i++) {
 		FreeSequence(s->seqs[i]);
+		FreeSequenceGap(s->gaps[i]);
 	}
 	free(s->seqs);
+	free(s->gaps);
 	free(s);
 }
+
 
 int WriteSequenceAlignmentFASTA(FILE *file, SequenceAlignment *s) {
 	int i;
@@ -192,6 +207,8 @@ void Reorder(SequenceAlignment *s) {
 	}
 }
 
+// Attemp to store all the gap information made
+// Newly added structure was not used yet
 SequenceAlignment *LoadMultipleAlignment(char *file) {
 	FileReader *in = readerOpen(file);
 	int len = 0;
@@ -203,14 +220,22 @@ SequenceAlignment *LoadMultipleAlignment(char *file) {
 		int j;
 		int i = out->numSeqs;
 		out->numSeqs++;
-		out->seqs = (Sequence**) realloc(out->seqs, out->numSeqs * sizeof(Sequence**));
+		out->seqs = (Sequence**) realloc(out->seqs, out->numSeqs * sizeof(Sequence**));		
 		out->seqs[i] = (Sequence*) calloc(1, sizeof(Sequence));
 		out->seqs[i]->name = strdup(line+1);
+
+		//Jisoo
+		out->gaps = (SequenceGap**) realloc(out->gaps, out->numSeqs * sizeof(SequenceGap**));
+		out->gaps[i] = (SequenceGap*)calloc(1, sizeof(SequenceGap));
+		out->gaps[i]->index = calloc(1, (sizeof(int*)));
+		out->gaps[i]->len = calloc(1, (sizeof(int*)));
+
 		while (readerGetLine(in, &line, &len)) {
 			int *seqLen = &out->seqs[i]->length;
 			char *seqPos;
 			if (line[0] == '>') break;
 			out->seqs[i]->seq = realloc(out->seqs[i]->seq, sizeof(char)*(strlen(line) + *seqLen));
+			
 			seqPos = out->seqs[i]->seq + *seqLen;
 			for (j=0; line[j]; j++) {
 				char c = line[j];
