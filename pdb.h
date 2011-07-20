@@ -19,8 +19,6 @@
 #include "FileReader.h"
 #include "chain.h"
 
-
-
 struct PDB_MODEL {
 	int numChains;
 	PDBChain **chains;

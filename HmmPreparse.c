@@ -44,6 +44,12 @@
 const char formats[][6] = {"pdb", "txt", "fasta", "spt", "msf", "pir", "spdbv"};
 //*/
 
+struct HELIX_COLLECTION {
+	AlphaHelix *helices;
+	int length;
+};
+typedef struct HELIX_COLLECTION Helices;
+
 
 #define VERSION "1.00"
 
@@ -56,11 +62,11 @@ void Usage() {
 }
 
 void Feedback(FILE *out, char *prefix, char *string, va_list arg, char *suffix) {
-	fprintf(out, prefix);
+	fprintf(out, "%s", prefix);
 
 	vfprintf(out, string, arg);
 
-	fprintf(out, suffix);
+	fprintf(out, "%s", suffix);
 }
 
 /* Not necessarily accurate counts in OpenMP mode, but doesn't really matter.
@@ -265,36 +271,38 @@ int LoadTables() {
 
 
 // Cleaning up pool of alpha helices
-void CleanupHelices(PDBChain *chain) {
+void CleanupHelices(PDBModel *model) {
 	// If more than two alpha helices share same region, manipulate indices and extend lengths
 	// Total size of pool will be reduced if duplicated alpha helices are found
-	int i=0;
-	while(i < chain->numAlphaHelices) {
-		AlphaHelix helix1 = chain->alphaHelices[i];
-		AlphaHelix helix2 = chain->alphaHelices[i+1];
+	int nSeqs;
+	for(nSeqs = 0; nSeqs < model->numChains ; nSeqs++) {
+		PDBChain *chain = model->chains[nSeqs];
+		int i=0;
+		while(i < chain->numAlphaHelices) {
+			AlphaHelix helix1 = chain->alphaHelices[i];
+			AlphaHelix helix2 = chain->alphaHelices[i+1];
+			
+			if( ((helix1.start <= helix2.start) && (helix2.start <= helix1.start + helix1.length) && (helix1.type == helix2.type)) 
+			 || ((helix2.start <= helix1.start) && (helix1.start <= helix2.start + helix2.length) && (helix1.type == helix2.type)) ) { 
 		
-		if( ((helix1.start <= helix2.start) && (helix2.start <= helix1.start + helix1.length) && (helix1.type == helix2.type)) ) {
-		// || ((helix2.start <= helix1.start) && (helix1.start <= helix2.start + helix2.length) && (helix1.type == helix2.type)) ) { 
+				int end = ((helix1.start + helix1.length) > (helix2.start + helix2.length)) ? (helix1.start + helix1.length) : (helix2.start + helix2.length);
+				AlphaHelix helix;
+				helix.start = (helix1.start < helix2.start) ? helix1.start : helix2.start;
+				helix.length = end - helix.start;
 	
-			//int end = ((helix1.start + helix1.length) > (helix2.start + helix2.length)) ? (helix1.start + helix1.length) : (helix2.start + helix2.length);
-			AlphaHelix helix;
-			//helix.start = (helix1.start < helix2.start) ? helix1.start : helix2.start;
-			//helix.length = end - helix.start;
-			helix.start = helix1.start;
-			helix.length = (helix2.start-helix1.start) + helix2.length;
-
-			helix.type = helix1.type;	
-			helix.id[0] = helix.comment[0] = 0;
-			chain->alphaHelices[i] = helix;
-			
-			int j;
-			for(j=i+1;j<chain->numAlphaHelices;j++) {
-				chain->alphaHelices[j] = chain->alphaHelices[j+1];
+				helix.type = helix1.type;	
+				helix.id[0] = helix.comment[0] = 0;
+				chain->alphaHelices[i] = helix;
+				
+				int j;
+				for(j=i+1;j<chain->numAlphaHelices;j++) {
+					chain->alphaHelices[j] = chain->alphaHelices[j+1];
+				}
+				
+				chain->numAlphaHelices--;
 			}
-			
-			chain->numAlphaHelices--;
+			else i++;
 		}
-		else i++;
 	}
 }
 
@@ -302,21 +310,17 @@ void CleanupHelices(PDBChain *chain) {
 // Have same functionality as CleanupHelices(PDBChain *chain) 
 // Defined for different intput data type
 // Cleaning up pool of alpha helices
-void TempCleanupHelices(AlphaHelix* helices) {
+void TempCleanupHelices(Helices* h) {
 	// Calculate total number of elements in helices
-	int numHelices = 0;
-	while( helices[numHelices].start !=0 && helices[numHelices].length !=0 && helices[numHelices].type !=0 ){
-		numHelices++;
-	}
 
 	// If more than two alpha helices share same region, manipulate indices and extend lengths
 	// Total size of pool will be reduced if duplicated alpha helices are found
 	int i=0;
-	while(i < numHelices) {
-		AlphaHelix helix1 = helices[i];
+	while(i < h->length) {
+		AlphaHelix helix1 = h->helices[i];
 		int j;
-		for(j=i+1;j<numHelices;j++) {
-			AlphaHelix helix2 = helices[j];
+		for(j=i+1;j<h->length;j++) {
+			AlphaHelix helix2 = h->helices[j];
 			
 			if( ((helix1.start <= helix2.start) && (helix2.start <= helix1.start + helix1.length) && (helix1.type == helix2.type))
 			 || ((helix2.start <= helix1.start) && (helix1.start <= helix2.start + helix2.length) && (helix1.type == helix2.type)) ) { 
@@ -326,18 +330,18 @@ void TempCleanupHelices(AlphaHelix* helices) {
 				helix.length = end - helix.start;
 				helix.type = helix1.type;
 				helix.id[0] = helix.comment[0] = 0;
-				helices[i] = helix;
+				h->helices[i] = helix;
 				
 				int k;
-				for(k=j;k<numHelices;k++) {
-					helices[k] = helices[k+1];
+				for(k=j;k<h->length;k++) {
+					h->helices[k] = h->helices[k+1];
 					
 					// To put helices[j+1] out of consideration later
-					helices[k+1].start = 0;
-					helices[k+1].length = 0;
-					helices[k+1].type = 0;
+					h->helices[k+1].start = 0;
+					h->helices[k+1].length = 0;
+					h->helices[k+1].type = 0;
 				}
-				numHelices--;
+				h->length--;
 			}
 		}
 		i++;
@@ -345,20 +349,24 @@ void TempCleanupHelices(AlphaHelix* helices) {
 	
 	// Final cleanup: Remove all duplicated helices
 	i=0;
-	while( i < numHelices ) {
-		if( (helices[i].start == helices[i+1].start) && (helices[i].length == helices[i+1].length) && (helices[i].type == helices[i+1].type) ) {
-			helices[i+1].start = 0;
-			helices[i+1].length = 0;
-			helices[i+1].type = 0;
-			numHelices--;	
+	while( i < h->length ) {
+		if( (h->helices[i].start == h->helices[i+1].start) && 
+		    (h->helices[i].length == h->helices[i+1].length) && 
+		    (h->helices[i].type == h->helices[i+1].type) ) {
+			h->helices[i+1].start = 0;
+			h->helices[i+1].length = 0;
+			h->helices[i+1].type = 0;
+			h->length--;	
 		}
 		i++;
 	}
+	h->length--;
+
 }
 
 
 // Reindex alpha annotations considering gaps from results of multiple alignment
-void ReindexingHelices(PDBChain *chain, SequenceAlignment *seqs, int index) {
+void ReindexingHelices(PDBModel *model, SequenceAlignment *seqs) {
      int i,j;
      int action = 0;
      int s = 0;
@@ -367,45 +375,49 @@ void ReindexingHelices(PDBChain *chain, SequenceAlignment *seqs, int index) {
      int acc_len = 0;
      char previous = 1;
 
-     for(i=0;i<seqs->seqs[index]->length;i++) {
-        char c = seqs->seqs[index]->seq[i];
-	 	if(c<0) { // Found gap
-        	if(previous < 0) { // Middle of gap
-	      		len++;
-	      		e = s + len;
-		   		previous = c;	  
-	      	}
-	      	else { // first gap
-	     	   s = i;
-	           previous = c;
-	           len++;	   	 
-	    	}
+	 int nSeqs;
+	 for(nSeqs=0 ; nSeqs<model->numChains ; nSeqs++) {
+		 PDBChain *chain = model->chains[nSeqs];
+	
+		 for(i=0;i<seqs->seqs[nSeqs]->length;i++) {
+			char c = seqs->seqs[nSeqs]->seq[i];
+			if(c<0) { // Found gap
+				if(previous < 0) { // Middle of gap
+					len++;
+					e = s + len;
+					previous = c;	  
+				}
+				else { // first gap
+				   s = i;
+				   previous = c;
+				   len++;	   	 
+				}
+			}
+			else { // Found residue	
+				// After identifying gaps, push indices and lengths of alpha helices accordingly
+				if(previous < 0) { // This residue is right after a gap
+					for(j=0;j<chain->numAlphaHelices;j++) {
+						if(s <= chain->alphaHelices[j].start) {
+							chain->alphaHelices[j].start += len;            		
+						}
+						else if(s < (chain->alphaHelices[j].start + chain->alphaHelices[j].length) ) {
+							chain->alphaHelices[j].length += len;
+						}
+						
+					}
+				}
+				len = 0;
+				previous = c;
+			}
 		}
-        else { // Found residue	
-        	// After identifying gaps, push indices and lengths of alpha helices accordingly
-	    	if(previous < 0) { // This residue is right after a gap
-            	for(j=0;j<chain->numAlphaHelices;j++) {
-            		if(s <= chain->alphaHelices[j].start) {
-            			chain->alphaHelices[j].start += len;            		
-		            }
-		            else if(s < (chain->alphaHelices[j].start + chain->alphaHelices[j].length) ) {
-		            	chain->alphaHelices[j].length += len;
-		            }
-		            
-	        	}
-	      	}
-	      	len = 0;
-            previous = c;
-        }
+
 	}
-
-	CleanupHelices(chain);
-
+	CleanupHelices(model);
 }
 
 
 // Filtering alpha helices by deciding residues in consensus using ratio of amino acids
-AlphaHelix *HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, float threshold) {
+void HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, float threshold) {
 	int i,j;
 	int max_len = 0;
 	
@@ -429,9 +441,8 @@ AlphaHelix *HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, float th
 		}
 	}
 	
-	// All the resulting alpha helices will be store in out
-	AlphaHelix *out = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
 	int hnum = 0;
+	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
 	
 	for(i=0;i<seqs->numSeqs;i++) {
 		PDBChain *chain = model->chains[i];
@@ -458,8 +469,9 @@ AlphaHelix *HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, float th
 						helix.id[0] = helix.comment[0] = 0;
 																		
 						hnum++;
-						out = (AlphaHelix*) realloc(out, hnum*sizeof(AlphaHelix));
-						out[hnum-1] = helix;
+						//out = (AlphaHelix*) realloc(out, hnum*sizeof(AlphaHelix));
+						hout->helices = (AlphaHelix*) realloc(hout->helices, hnum*sizeof(AlphaHelix));
+						hout->helices[hnum-1] = helix;
 						len = 0;
 					}
 				}
@@ -474,8 +486,8 @@ AlphaHelix *HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, float th
 						helix.id[0] = helix.comment[0] = 0;
 						
 						hnum++;
-						out = (AlphaHelix*) realloc(out, hnum*sizeof(AlphaHelix));
-						out[hnum-1] = helix;
+						hout->helices = (AlphaHelix*) realloc(hout->helices, hnum*sizeof(AlphaHelix));
+						hout->helices[hnum-1] = helix;
 					}
 					s = k + 1;
 					len = 0;
@@ -483,13 +495,13 @@ AlphaHelix *HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, float th
 			}
 		}
 	}
+	
+	hout->length = hnum;
 	free(matrix);
-	return out;
 }
 
-
 // Filtering alpha helices by deciding residues in consensus using ratio of alpha helices
-AlphaHelix *HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, float threshold) {
+void HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, float threshold) {
 	int i,j,k;
 	int max_len = 0;
 	
@@ -513,22 +525,21 @@ AlphaHelix *HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, float thre
 
 			for(k=ind1;k<ind2;k++) {
 				char c = seqs->seqs[i]->seq[k];
-				if ( 'A' <= ShortNames[c] && ShortNames[c] <= 'Z' ) { 
+				if( 'A' <= ShortNames[c] && ShortNames[c] <= 'Z' ) {
 					matrix[k]++;
 				}		
 			}			
 		}
 	}
 	
-	// All the resulting alpha helices will be store in out
-	AlphaHelix *out = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
 	int hnum = 0;
+	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
 	
 	int beginning = 0;
 	int s = 0;
 	int len = 0;
 	for(i=0;i<max_len;i++) {
-		float t = (float)(matrix[i]) / (float)(seqs->numSeqs);
+		float t = (float)(matrix[i]) / (float)(seqs->numSeqs); 
 		if(t >= threshold) { // Found first residue of potential alpha helix in consensus
 			if(beginning == 0) {
 				s = i;
@@ -552,7 +563,7 @@ AlphaHelix *HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, float thre
 				// Inifinite loop here
 				while(type == 0 && j<seqs->numSeqs) {
 					PDBChain *chain = model->chains[j];
-					for(k=0;k<chain->numAlphaHelices;k++) {
+					for(k=0;k<chain->numAlphaHelices-1;k++) {
 						if( (s >= chain->alphaHelices[k].start) && (s+len <= (chain->alphaHelices[k+1].start + chain->alphaHelices[k+1].length)) ) 
 						{
 							type = chain->alphaHelices[k].type;
@@ -565,14 +576,14 @@ AlphaHelix *HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, float thre
 				helix.id[0] = helix.comment[0] = 0;
 																
 				hnum++;
-				out = (AlphaHelix*) realloc(out, hnum*sizeof(AlphaHelix));
-				out[hnum-1] = helix;
-				len = 0;
+				hout->helices = (AlphaHelix*) realloc(hout->helices, hnum*sizeof(AlphaHelix));
+				hout->helices[hnum-1] = helix;
 			}
+			len = 0;
 		}
 	}
+	hout->length = hnum;
 	free(matrix);
-	return out;
 }
 
 
@@ -583,7 +594,7 @@ void printOption()
 	printf("Usage: [executable] -m [alpha|residue] <protein name>\n");
 	printf("Usage: [executable] -t [consensus threshold =< 1 ] <protein name>\n");
 	printf("Usage: [executable] -o [alpha|beta] <protein name>\n");
-	printf("Multiple options can be used.");
+	printf("Multiple options can be used. \n");
 }
 
 // CDECL is needed to avoid a warning under MSVC when using fastcall.
@@ -678,10 +689,16 @@ int CDECL main(int realArgc, char **realArgv) {
 
 		char *fileName = (char*) malloc(strlen(realArgv[a]) + 50);
 		sprintf(fileName, "%s.fasta", realArgv[a]);
-		seqs = LoadMultipleAlignment(fileName);
+	    if(!(seqs = LoadMultipleAlignment(fileName))) {
+			printf("%s.fasta does not exist.\n", realArgv[a]);
+			return 0;
+		}
 
 		sprintf(fileName, "%s.pdb", realArgv[a]);
-		pdb = LoadPDBFile(fileName, 1, 2, 0, 1);
+        if(!(pdb = LoadPDBFile(fileName, 1, 2, 0, 1))) {
+			printf("%s.pdb does not exist.\n", realArgv[a]);
+			return 0;
+		}
 		model = pdb->models[0];
 
 		seqIndices = (int**) malloc(2*seqs->numSeqs * sizeof(int*));
@@ -708,19 +725,15 @@ int CDECL main(int realArgc, char **realArgv) {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		// Reindexing alpha helices considering gaps in multiple alignment
-		for (i = 0 ; i < seqs->numSeqs; i++ )
-		{
-			PDBChain *chain = model->chains[i];
-			ReindexingHelices(chain, seqs, i);
-		}
-
+		ReindexingHelices(model, seqs);
+		
 		// Deciding alpha helices in consensus
-		AlphaHelix *halpha;
+		Helices *halpha = (Helices*) malloc(sizeof(Helices*));
 		if(method == 0) {
-			halpha = HelixAlphaRatio(model, seqs, threshold);
+			HelixAlphaRatio(model, seqs, halpha, threshold);
 		}
 		else if(method == 1) {
-			halpha = HelixResidueRatio(model, seqs, threshold);
+			HelixResidueRatio(model, seqs, halpha, threshold);
 			TempCleanupHelices(halpha);
 		}
 		
@@ -748,17 +761,17 @@ int CDECL main(int realArgc, char **realArgv) {
 		fprintf(out, "#=ALPHA format: start length type\n\n");
 		
 		// Print alpha annotations only if alpha = 1
-	    if(alpha == 1) {
-			i = 0;
-			while( halpha[i].start !=0 && halpha[i].length !=0 && halpha[i].type !=0 ){
-				fprintf(out, "#=ALPHA %d %d %d\n", halpha[i].start, halpha[i].length, halpha[i].type);			
-				i++;
-			}
-			fprintf(out,"\n\n");
+		for(i=0;i<halpha->length;i++) {
+			fprintf(out, "#=ALPHA %d %d %d\n", halpha->helices[i].start, halpha->helices[i].length, halpha->helices[i].type);			
 		}
+		fprintf(out,"\n\n");
 		
-		// Free AlphaHelix*
-		if(halpha) free(halpha);
+		
+		// Free memories
+		if(halpha) {
+			free(halpha->helices);
+			free(halpha);
+		}
 
 
 ////////////////////////////////////////////////////////////////////////////////////		
