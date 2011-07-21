@@ -442,7 +442,7 @@ void HelixResidueRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, 
 	}
 	
 	int hnum = 0;
-	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
+	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix));
 	
 	for(i=0;i<seqs->numSeqs;i++) {
 		PDBChain *chain = model->chains[i];
@@ -533,7 +533,7 @@ void HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, fl
 	}
 	
 	int hnum = 0;
-	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix*));
+	hout->helices = (AlphaHelix*) malloc(sizeof(AlphaHelix));
 	
 	int beginning = 0;
 	int s = 0;
