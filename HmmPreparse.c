@@ -762,7 +762,7 @@ int CDECL main(int realArgc, char **realArgv) {
 		
 		// Print alpha annotations only if alpha = 1
 		for(i=0;i<halpha->length;i++) {
-			fprintf(out, "#=ALPHA %d %d %d\n", halpha->helices[i].start, halpha->helices[i].length, halpha->helices[i].type);			
+			fprintf(out, "#=ALPHA %d %d %d\n", halpha->helices[i].start+1, halpha->helices[i].length, halpha->helices[i].type);			
 		}
 		fprintf(out,"\n\n");
 		
