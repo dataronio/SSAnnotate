@@ -278,7 +278,7 @@ void CleanupHelices(PDBModel *model) {
 	for(nSeqs = 0; nSeqs < model->numChains ; nSeqs++) {
 		PDBChain *chain = model->chains[nSeqs];
 		int i=0;
-		while(i < chain->numAlphaHelices) {
+		while(i < chain->numAlphaHelices-1) {
 			AlphaHelix helix1 = chain->alphaHelices[i];
 			AlphaHelix helix2 = chain->alphaHelices[i+1];
 			
@@ -295,7 +295,7 @@ void CleanupHelices(PDBModel *model) {
 				chain->alphaHelices[i] = helix;
 				
 				int j;
-				for(j=i+1;j<chain->numAlphaHelices;j++) {
+				for(j=i+1;j<chain->numAlphaHelices-1;j++) {
 					chain->alphaHelices[j] = chain->alphaHelices[j+1];
 				}
 				
@@ -333,15 +333,15 @@ void TempCleanupHelices(Helices* h) {
 				h->helices[i] = helix;
 				
 				int k;
-				for(k=j;k<h->length;k++) {
+				for(k=j;k<h->length-1;k++) {
 					h->helices[k] = h->helices[k+1];
 					
 					// To put helices[j+1] out of consideration later
 					h->helices[k+1].start = 0;
 					h->helices[k+1].length = 0;
 					h->helices[k+1].type = 0;
+					h->length--;
 				}
-				h->length--;
 			}
 		}
 		i++;
@@ -349,7 +349,7 @@ void TempCleanupHelices(Helices* h) {
 	
 	// Final cleanup: Remove all duplicated helices
 	i=0;
-	while( i < h->length ) {
+	while( i < h->length-1 ) {
 		if( (h->helices[i].start == h->helices[i+1].start) && 
 		    (h->helices[i].length == h->helices[i+1].length) && 
 		    (h->helices[i].type == h->helices[i+1].type) ) {
@@ -569,7 +569,8 @@ void HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, fl
 							type = chain->alphaHelices[k].type;
 							break;
 						}
-					}	
+					}
+					j++;
 				}
 				
 				helix.type = type;
@@ -590,12 +591,20 @@ void HelixAlphaRatio(PDBModel *model, SequenceAlignment *seqs, Helices *hout, fl
 // Print error messages when wrong options are used
 void printOption() 
 {
-	printf("Usage: [executable] <protein name>\n");
-	printf("Usage: [executable] -m [alpha|residue] <protein name>\n");
-	printf("Usage: [executable] -t [consensus threshold =< 1 ] <protein name>\n");
-	printf("Usage: [executable] -o [alpha|beta] <protein name>\n");
-	printf("Multiple options can be used. \n");
+	printf("\n");
+	printf("Usage: \n");
+	printf("<executable>");
+	printf("  [-m alpha or residue]");
+	printf("  [-t any real number between 0 and 1]");
+	printf("  [-o alpha or beta]");
+	printf("  <input protein or family name>\n\n");     
+
+	printf("Options: \n");
+	printf("     -m   Method to decide consensus between alpha helices between multiple chains. Default is alpha. \n");   
+	printf("     -t   Consensus threshold. Default is 0.5. \n");
+	printf("     -o   Annotations that will be added to output file. Default is both. \n\n");
 }
+
 
 // CDECL is needed to avoid a warning under MSVC when using fastcall.
 // Defined to be nothing in other environments.
@@ -604,9 +613,9 @@ int CDECL main(int realArgc, char **realArgv) {
 	if (realArgc <= 1) {
 	// When the program has no input
 		printf("Nothing to do.\n");
+		printf("Run with -h to see help.\n");
 		return 0;
 	}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////	
 
@@ -627,8 +636,11 @@ int CDECL main(int realArgc, char **realArgv) {
 	int c = 0;
 	char *option = "";
 	
-	while ( (c = getopt(realArgc, realArgv, "m:o:t:") ) != -1 ) {
+	while ( (c = getopt(realArgc, realArgv, "hm:o:t:") ) != -1 ) {
 		switch (c) {
+		case 'h':
+			printOption();
+			break;
 		case 'm': 
 			option = optarg;
 			if(	strcmp(option, "alpha") == 0 ) method = 0;
@@ -728,7 +740,7 @@ int CDECL main(int realArgc, char **realArgv) {
 		ReindexingHelices(model, seqs);
 		
 		// Deciding alpha helices in consensus
-		Helices *halpha = (Helices*) malloc(sizeof(Helices*));
+		Helices *halpha = (Helices*) malloc(sizeof(Helices));
 		if(method == 0) {
 			HelixAlphaRatio(model, seqs, halpha, threshold);
 		}
