@@ -220,12 +220,12 @@ SequenceAlignment *LoadMultipleAlignment(char *file) {
 		int j;
 		int i = out->numSeqs;
 		out->numSeqs++;
-		out->seqs = (Sequence**) realloc(out->seqs, out->numSeqs * sizeof(Sequence**));		
+		out->seqs = (Sequence**) realloc(out->seqs, out->numSeqs * sizeof(Sequence*));		
 		out->seqs[i] = (Sequence*) calloc(1, sizeof(Sequence));
 		out->seqs[i]->name = strdup(line+1);
 
 		//Jisoo
-		out->gaps = (SequenceGap**) realloc(out->gaps, out->numSeqs * sizeof(SequenceGap**));
+		out->gaps = (SequenceGap**) realloc(out->gaps, out->numSeqs * sizeof(SequenceGap*));
 		out->gaps[i] = (SequenceGap*)calloc(1, sizeof(SequenceGap));
 		out->gaps[i]->index = calloc(1, (sizeof(int*)));
 		out->gaps[i]->len = calloc(1, (sizeof(int*)));

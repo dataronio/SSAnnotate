@@ -237,7 +237,6 @@ int LoadTables() {
 		}
 		readerClose(in);
 	}
-
 	free(line);
 	if (res) {
 		int q;
@@ -365,6 +364,7 @@ void TempCleanupHelices(Helices* h) {
 }
 
 
+
 // Reindex alpha annotations considering gaps from results of multiple alignment
 void ReindexingHelices(PDBModel *model, SequenceAlignment *seqs) {
      int i,j;
@@ -414,6 +414,53 @@ void ReindexingHelices(PDBModel *model, SequenceAlignment *seqs) {
 	}
 	CleanupHelices(model);
 }
+
+
+/* 
+// The second version of ReindexingHelices
+// Reindex alpha annotations considering gaps from results of multiple alignment
+void ReindexingHelices(PDBChain *chain, Sequence *seqs) {
+     int i,j;
+     int action = 0;
+     int s = 0;
+     int e = 0;
+     int len = 0;
+     int acc_len = 0;
+     char previous = 1;
+
+	 for(i=0;i<seqs->length;i++) {
+		char c = seqs->seq[i];
+		if(c<0) { // Found gap
+			if(previous < 0) { // Middle of gap
+				len++;
+				e = s + len;
+				previous = c;	  
+			}
+			else { // first gap
+			   s = i;
+			   previous = c;
+			   len++;	   	 
+			}
+		}
+		else { // Found residue	
+			// After identifying gaps, push indices and lengths of alpha helices accordingly
+			if(previous < 0) { // This residue is right after a gap
+				for(j=0;j<chain->numAlphaHelices;j++) {
+					if(s <= chain->alphaHelices[j].start) {
+						chain->alphaHelices[j].start += len;            		
+					}
+					else if(s < (chain->alphaHelices[j].start + chain->alphaHelices[j].length) ) {
+						chain->alphaHelices[j].length += len;
+					}
+					
+				}
+			}
+			len = 0;
+			previous = c;
+		}
+	}	
+}
+*/
 
 
 // Filtering alpha helices by deciding residues in consensus using ratio of amino acids
@@ -738,6 +785,17 @@ int CDECL main(int realArgc, char **realArgv) {
 		
 		// Reindexing alpha helices considering gaps in multiple alignment
 		ReindexingHelices(model, seqs);
+
+		/*
+		// Use the below to use the second version of ReindexingHelices
+		int nSeqs;
+		for(nSeqs=0 ; nSeqs<model->numChains ; nSeqs++) {
+			PDBChain *chain = model->chains[nSeqs];
+			Sequence *seq = seqs->seqs[nSeqs];
+			ReindexingHelices(chain, seq);
+		}
+		CleanupHelices(model);
+		*/
 		
 		// Deciding alpha helices in consensus
 		Helices *halpha = (Helices*) malloc(sizeof(Helices));
@@ -869,6 +927,7 @@ int CDECL main(int realArgc, char **realArgv) {
 					pairs[k].count = count;
 				}
 			}
+
 			free(betaPairs);
 			for (i=0; i<numPairs; i++) {
 				int dir;
@@ -984,7 +1043,7 @@ int CDECL main(int realArgc, char **realArgv) {
 				if (strand->length > 1) {
 					numStrands++;
 				}
-				free(newPos);
+				if(newPos) free(newPos);
 				if (markForDeath) break;
 			}
 			free(pairs);
@@ -1177,7 +1236,7 @@ int CDECL main(int realArgc, char **realArgv) {
 				}
 				fclose(out);
 				numStrands = 0;
-				free(strands);
+				if(strands) free(strands);
 				break;
 				//*/
 			}

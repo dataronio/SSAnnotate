@@ -371,6 +371,8 @@ PDBData * LoadFileReader(FileReader *FileReader, char *suggestedName, int loadSe
 
 	int HET = 0;
 
+		
+
 	memset(cachedStrings, 0, sizeof(cachedStrings));
 	if (!FileReader) return out;
 	out = (PDBData*)calloc(1, sizeof(PDBData));
@@ -380,6 +382,21 @@ PDBData * LoadFileReader(FileReader *FileReader, char *suggestedName, int loadSe
 		out->name = strdup("none");
 
 	while ((i=readerGetLine(FileReader, &line, &lineLen)) > 0) {
+	
+		int index;
+		
+		// Jisoo
+		// If an index in .pdb file has more than 5 digits, it increment the length of the line by one.
+		// Handle this case by removing the first digit of the index
+		// If the number of ATOM lines are more than 109999, more than one line possibly will have same indices. 
+		if('0' <= line[6] && line[6] <= '9' && '0' <= line[11] && line[11] <= '9') {
+			int index;
+			for(index = 6;index < i-1;index++) {
+				line[index] = line[index+1];
+			}
+		}
+		
+
 		if (loadSeqres && stristart("SEQRES", line)==0 && i>=21) {
 			seqres++;
 			if (!model)
@@ -413,8 +430,10 @@ PDBData * LoadFileReader(FileReader *FileReader, char *suggestedName, int loadSe
 			modelStart = 1;
 			if (!model)
 				model = AddModel(out, 0);
-			if (!chain || chain->chainName != line[21])
+			
+			if (!chain || chain->chainName != line[21]) {
 				chain = AddNewChain(model, line[21]);
+			}
 			if (chain->terminated)
 				continue;
 			chain->atoms = (Atom*)realloc(chain->atoms, (++(chain->numAtoms)) * sizeof(Atom));
@@ -525,7 +544,9 @@ PDBData * LoadFileReader(FileReader *FileReader, char *suggestedName, int loadSe
 		}
 		else if (stristart("TER", line)==0 && i>=21) {
 			PDBChain *lchain = chain;
+			// Debug
 			chain = GetChain(model, line[21]);
+			//chain = GetChain(model, line[index]);
 			if (chain != lchain) {
 				/* Hack for 1dx5, which has a typo, and its many friends. */
 				if (!chain || chain->terminated || chain->numAtoms == 0) chain = lchain;
@@ -979,7 +1000,7 @@ PDBData *LoadPDBFile(char *file, int seqres, int maxGaps, int caonly, int het) {
 							sprintf(path2, "%s%c%s", prefix, DIR_DELIMITER, path);
 						}
 						reader = TryOpen(path2, name);
-						free(path2);
+						if(path2) free(path2);
 						prefix = strtok(0, ";");
 					}
 					free(search);
