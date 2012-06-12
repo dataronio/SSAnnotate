@@ -826,14 +826,19 @@ int CDECL main(int realArgc, char **realArgv) {
 		}
 
 		fprintf(out, "# STOCKHOLM 1.0\n\n");
-		fprintf(out, "#=ALPHA type description: RIGHT_ALPHA = 1;\n");
-		fprintf(out, "#=ALPHA LEFT_ALPHA.ll = 6; RIGHT_310 = 5;\n");
-		fprintf(out, "#=ALPHA format: start length type\n\n");
+
+		if(alpha == 1) {
+			fprintf(out, "#=ALPHA type description: RIGHT_ALPHA = 1;\n");
+			fprintf(out, "#=ALPHA LEFT_ALPHA.ll = 6; RIGHT_310 = 5;\n");
+			fprintf(out, "#=ALPHA format: start length type\n\n");
 		
-		// Print alpha annotations only if alpha = 1
-		for(i=0;i<halpha->length;i++) {
-			fprintf(out, "#=ALPHA %d %d %d\n", halpha->helices[i].start+1, halpha->helices[i].length, halpha->helices[i].type);			
+			// Print alpha annotations only if alpha = 1
+			for(i=0;i<halpha->length;i++) {
+				fprintf(out, "#=ALPHA %d %d %d\n", halpha->helices[i].start+1, halpha->helices[i].length, halpha->helices[i].type);			
+			}
+		
 		}
+		
 		fprintf(out,"\n\n");
 		
 		
